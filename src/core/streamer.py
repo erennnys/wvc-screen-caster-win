@@ -111,13 +111,12 @@ class ScreenStreamer:
             "-pix_fmt", "yuv420p",
             "-g", str(keyframe_interval),
             "-keyint_min", str(keyframe_interval),
-            "-sc_threshold", "0",
         ])
 
         if encoder == "libx264":
             cmd.extend(["-preset", "ultrafast", "-tune", "zerolatency"])
         elif encoder == "h264_nvenc":
-            cmd.extend(["-preset", "ll", "-tune", "zerolatency", "-rc", "cbr_ld_hq"])
+            cmd.extend(["-preset", "p1", "-tune", "ull"])
         elif encoder == "h264_qsv":
             cmd.extend(["-preset", "veryfast", "-low_power", "1"])
 

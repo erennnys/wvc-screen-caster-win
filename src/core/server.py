@@ -44,6 +44,9 @@ class CasterServer:
         self._active_websockets: Set[web.WebSocketResponse] = set()
 
     def _setup_routes(self, app: web.Application):
+        # 0. Global OPTIONS Preflight Handler for TVs
+        app.router.add_route("OPTIONS", "/{tail:.*}", self._handle_options)
+
         # 1. Web Receiver entry points
         app.router.add_get("/", self._handle_index_redirect)
         app.router.add_get("/web-receiver/", self._handle_index_redirect)
@@ -56,6 +59,7 @@ class CasterServer:
         app.router.add_get("/web-receiver/discover.gif", self._handle_discover_gif)
         app.router.add_get("/web-receiver-io/cast2tv.gif", self._handle_beacon_gif)
         app.router.add_post("/web-receiver-io/connect", self._handle_receiver_connect)
+        app.router.add_get("/web-receiver-io/longPoll", self._handle_long_poll)
 
         # 3. Real-time WebSocket Control
         app.router.add_get("/ws", self._handle_websocket)
@@ -70,6 +74,18 @@ class CasterServer:
 
         # 6. Status API
         app.router.add_get("/api/status", self._handle_api_status)
+
+    async def _handle_options(self, request: web.Request):
+        return web.Response(
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+            }
+        )
+
+    async def _handle_long_poll(self, request: web.Request):
+        return web.json_response({"status": "idle"}, headers={"Access-Control-Allow-Origin": "*"})
 
     async def _handle_index_redirect(self, request: web.Request):
         return web.HTTPFound("/web-receiver/index.html")
