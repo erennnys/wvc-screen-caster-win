@@ -50,10 +50,7 @@ class CasterServer:
         # 1. Web Receiver entry points
         app.router.add_get("/", self._handle_index_redirect)
         app.router.add_get("/web-receiver/", self._handle_index_redirect)
-        app.router.add_get("/web-receiver/index.html", self._handle_serve_receiver_file)
-        app.router.add_get("/web-receiver/player.js", self._handle_serve_receiver_file)
-        app.router.add_get("/web-receiver/style.css", self._handle_serve_receiver_file)
-        app.router.add_get("/web-receiver/hls.min.js", self._handle_serve_receiver_file)
+        app.router.add_get("/web-receiver/{filename:.*}", self._handle_serve_receiver_file)
 
         # 2. WVC Discovery Beacons
         app.router.add_get("/web-receiver/discover.gif", self._handle_discover_gif)

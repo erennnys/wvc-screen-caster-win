@@ -151,6 +151,7 @@ class MediaTab(QWidget):
         if not self.media_caster.active_file_path:
             return
 
+        app_state.set_mode("media_casting")
         subtitle_url = "/media/subtitle.vtt" if self.media_caster.converted_vtt_path else None
         self.server.broadcast_command({
             "action": "play_media",

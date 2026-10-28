@@ -249,14 +249,28 @@
             video.appendChild(track);
         }
 
-        video.src = mediaUrl;
+        // Smart TVs (TiVo/Vestel/webOS) require absolute URL with timestamp to prevent aggressive cache
+        const finalUrl = (mediaUrl.startsWith('http') ? mediaUrl : window.location.origin + mediaUrl) + '?t=' + Date.now();
+        video.src = finalUrl;
         video.load();
-        video.play().then(() => {
-            showHud(title, "Oynatılıyor", 3000);
-        }).catch(err => {
-            console.warn("Media play error:", err);
-            sendEvent('error', { message: 'Medya oynatılamadı: ' + err.message });
-        });
+        
+        // Ensure muted playback start fallback if autoplay policy blocks it on TV
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                showHud(title, "Oynatılıyor", 3000);
+            }).catch(err => {
+                console.warn("Media play error, retrying muted:", err);
+                video.muted = true;
+                video.play().then(() => {
+                    video.muted = false;
+                    showHud(title, "Oynatılıyor", 3000);
+                }).catch(e2 => {
+                    console.error("Fatal playback failure:", e2);
+                    sendEvent('error', { message: 'Medya oynatılamadı: ' + e2.message });
+                });
+            });
+        }
     }
 
     // Video Element Events Forwarding to Desktop App
