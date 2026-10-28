@@ -32,8 +32,8 @@ class MainWindow(QMainWindow):
         self.media_caster = media_caster
         self.local_ip = get_primary_local_ip()
 
-        self.resize(860, 640)
-        self.setMinimumSize(780, 580)
+        self.resize(980, 680)
+        self.setMinimumSize(920, 620)
         self.setStyleSheet(DARK_THEME_QSS)
 
         self._init_ui()
