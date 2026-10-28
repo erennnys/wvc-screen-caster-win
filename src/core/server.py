@@ -198,10 +198,15 @@ class CasterServer:
     async def _handle_tv_state(self, request: web.Request):
         try:
             data = await request.json()
-            state = data.get("state")
+            state = str(data.get("state", "")).lower()
             logger.info(f"TV Player State: {state}")
-            if state == "idle" and app_state.current_mode == "media_casting":
-                pass
+            if state in ("playing", "play"):
+                app_state.set_media_paused(False)
+            elif state in ("paused", "pause"):
+                app_state.set_media_paused(True)
+            elif state in ("ended", "idle", "stopped"):
+                if app_state.current_mode == "media_casting":
+                    app_state.set_mode("idle")
         except Exception:
             pass
         return web.json_response({"status": "ok"}, headers=CORS_HEADERS)
@@ -312,18 +317,32 @@ class CasterServer:
             return self._build_wvc_load_media_cmd(cmd.get("subtitle"))
         elif action == "pause":
             return {"cmd": "pause"}
-        elif action == "resume":
+        elif action in ("resume", "play"):
             return {"cmd": "play"}
         elif action == "stop":
             self._tv_sent_initial_media = False
             return {"cmd": "stop"}
         elif action == "seek":
-            # WVC expects position in milliseconds
             pos_sec = float(cmd.get("time", 0.0))
-            return {"cmd": "setPosition", "position": int(pos_sec * 1000)}
+            pos_ms = int(max(0.0, pos_sec) * 1000)
+            return {
+                "cmd": "setPosition",
+                "position": pos_ms,
+                "time": pos_ms,
+            }
         elif action == "volume":
-            level = float(cmd.get("level", 1.0))
-            return {"cmd": "setVolume", "volume": level}
+            level = max(0.0, min(1.0, float(cmd.get("level", 1.0))))
+            return {
+                "cmd": "setVolume",
+                "volume": level,
+                "level": level,
+            }
+        elif action == "mute":
+            is_muted = bool(cmd.get("mute", True))
+            return {
+                "cmd": "setMute",
+                "mute": is_muted,
+            }
         return None
 
     def _enqueue_tv_command(self, wvc_cmd: Dict[str, Any]):
@@ -383,6 +402,10 @@ class CasterServer:
                                 data.get("currentTime", 0.0),
                                 data.get("duration", 0.0)
                             )
+                        elif event == "play":
+                            app_state.set_media_paused(False)
+                        elif event == "pause":
+                            app_state.set_media_paused(True)
                         elif event == "ended":
                             logger.info("Browser reported media playback ended.")
                             app_state.set_mode("idle")
@@ -514,6 +537,17 @@ class CasterServer:
 
     def broadcast_command(self, cmd: dict):
         """Dispatches command to both Smart TV WVC Long-Poll queue and WebSocket clients."""
+        action = cmd.get("action")
+        if action == "pause":
+            app_state.set_media_paused(True)
+        elif action in ("play", "resume"):
+            app_state.set_media_paused(False)
+        elif action == "stop":
+            app_state.set_mode("idle")
+        elif action == "play_media":
+            app_state.set_mode("media_casting")
+            app_state.set_media_paused(False)
+
         # 1. Enqueue for Smart TV WVC App (/web-receiver-io/longPoll)
         wvc_cmd = self._translate_to_wvc_command(cmd)
         if wvc_cmd:

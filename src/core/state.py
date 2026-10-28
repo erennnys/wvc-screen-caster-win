@@ -68,7 +68,15 @@ class AppState:
     def set_mode(self, mode: str):
         with self._lock:
             self.current_mode = mode
+            if mode != "media_casting":
+                self.active_media_paused = False
+                self.active_media_current_time = 0.0
         self.notify_status("mode_changed", {"mode": mode})
+
+    def set_media_paused(self, paused: bool):
+        with self._lock:
+            self.active_media_paused = paused
+        self.notify_status("media_pause_changed", {"paused": paused})
 
     def update_media_progress(self, current_time: float, duration: float):
         with self._lock:
