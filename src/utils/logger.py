@@ -1,16 +1,16 @@
 """
-Application logging setup with a listener queue for UI integration.
+Silent-friendly application logging setup (handles windowless pyw.exe execution cleanly).
 """
 
 import logging
 import sys
-from typing import Callable, Optional
+from typing import Callable
 
 log_listeners = []
 
 
 class UIStreamHandler(logging.Handler):
-    """Dispatches log records to subscribed UI callbacks."""
+    """Dispatches log records to subscribed callbacks."""
 
     def emit(self, record):
         try:
@@ -25,7 +25,6 @@ class UIStreamHandler(logging.Handler):
 
 
 def add_log_listener(callback: Callable[[int, str], None]):
-    """Register a callback for UI log output."""
     if callback not in log_listeners:
         log_listeners.append(callback)
 
@@ -35,12 +34,11 @@ def remove_log_listener(callback: Callable[[int, str], None]):
         log_listeners.remove(callback)
 
 
-def setup_logger(level: int = logging.INFO) -> logging.Logger:
-    """Configures root logger with console and UI output."""
+def setup_logger(level: int = logging.WARNING) -> logging.Logger:
+    """Configures root logger without noisy console output."""
     root = logging.getLogger()
     root.setLevel(level)
 
-    # Clear existing handlers
     for h in list(root.handlers):
         root.removeHandler(h)
 
@@ -49,14 +47,13 @@ def setup_logger(level: int = logging.INFO) -> logging.Logger:
         datefmt="%H:%M:%S",
     )
 
-    console_h = logging.StreamHandler(sys.stdout)
-    console_h.setFormatter(formatter)
-    console_h.setLevel(level)
-    root.addHandler(console_h)
+    if sys.stdout is not None:
+        console_h = logging.StreamHandler(sys.stdout)
+        console_h.setFormatter(formatter)
+        console_h.setLevel(level)
+        root.addHandler(console_h)
 
-    ui_h = UIStreamHandler()
-    ui_h.setFormatter(formatter)
-    ui_h.setLevel(level)
-    root.addHandler(ui_h)
+    # Silence aiohttp access logs
+    logging.getLogger("aiohttp.access").setLevel(logging.ERROR)
 
     return root

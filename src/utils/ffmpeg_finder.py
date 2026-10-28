@@ -75,6 +75,7 @@ def get_available_encoders(ffmpeg_bin: str) -> List[str]:
             stderr=subprocess.PIPE,
             text=True,
             timeout=5,
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
         )
         output = proc.stdout
         # Priority order: NVIDIA NVENC -> Intel QuickSync -> AMD AMF -> CPU libx264
@@ -106,7 +107,14 @@ def get_dshow_audio_devices(ffmpeg_bin: str) -> List[str]:
     devices = []
     try:
         cmd = [ffmpeg_bin, "-list_devices", "true", "-f", "dshow", "-i", "dummy"]
-        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
+        proc = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=5,
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+        )
         output = proc.stderr
         in_audio_section = False
         for line in output.splitlines():

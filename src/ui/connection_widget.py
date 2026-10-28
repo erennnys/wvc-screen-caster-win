@@ -1,7 +1,8 @@
 """
-TV Connection, Pairing Code, and Network Discovery Widget.
+Modern TV Connection, Pairing Code Hero Badge, and Network Discovery Widget.
 """
 
+import threading
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QLineEdit, QPushButton, QFrame, QMessageBox
@@ -11,184 +12,220 @@ from src.core.base36 import ip_to_code
 from src.utils.network import get_primary_local_ip
 from src.core.state import app_state
 from src.core.discovery import DeviceScanner
+from src.utils.i18n import i18n
 
 
 class ConnectionWidget(QFrame):
-    """Card widget displaying pairing code, TV connection state, and manual connection controls."""
+    """Studio Hero Card displaying pairing code, TV connection pill, and manual connect bar."""
 
     tv_paired = pyqtSignal(str)
 
-    def __init__(self, parent=None):
+    def __init__(self, port: int = 30001, parent=None):
         super().__init__(parent)
-        self.setProperty("class", "card")
+        self.setObjectName("heroCard")
+        self.port = port
         self.local_ip = get_primary_local_ip()
         self.pc_code = ip_to_code(self.local_ip) or "WVC"
-        self._init_ui()
+        self._is_connected = False
+        self._connected_ip = ""
 
-        # Subscribe to app state
+        self._init_ui()
+        self._retranslate_ui()
+
         app_state.register_status_listener(self._on_app_state_change)
+        i18n.on_change(lambda _: self._retranslate_ui())
 
     def _init_ui(self):
-        main_layout = QVBoxLayout(self)
-        main_layout.setSpacing(12)
+        root = QVBoxLayout(self)
+        root.setContentsMargins(20, 18, 20, 18)
+        root.setSpacing(14)
 
-        # Top Bar: Status Badge & PC Pairing Code
-        top_layout = QHBoxLayout()
+        # Top Section: Left (Status + Instructions) | Right (Big Pairing Code Box)
+        top_row = QHBoxLayout()
+        top_row.setSpacing(20)
 
-        # Status badge container
-        status_box = QHBoxLayout()
+        left_col = QVBoxLayout()
+        left_col.setSpacing(8)
+
+        # Connection Status Pill
+        status_row = QHBoxLayout()
+        status_row.setSpacing(8)
         self.dot = QLabel()
-        self.dot.setFixedSize(14, 14)
-        self.dot.setStyleSheet("border-radius: 7px; background-color: #eab308;")  # Yellow: waiting
+        self.dot.setFixedSize(10, 10)
+        self.dot.setStyleSheet("border-radius: 5px; background-color: #F59E0B;")
 
-        self.status_label = QLabel("TV Bağlantısı Bekleniyor...")
-        self.status_label.setStyleSheet("font-weight: 600; font-size: 14px; color: #f8fafc;")
+        self.status_label = QLabel()
+        self.status_label.setStyleSheet("font-weight: 700; font-size: 14px; color: #F8FAFC;")
 
-        status_box.addWidget(self.dot)
-        status_box.addWidget(self.status_label)
-        top_layout.addLayout(status_box)
+        status_row.addWidget(self.dot)
+        status_row.addWidget(self.status_label)
+        status_row.addStretch()
+        left_col.addLayout(status_row)
 
-        top_layout.addStretch()
+        # Helper instruction text
+        self.hint_label = QLabel()
+        self.hint_label.setWordWrap(True)
+        self.hint_label.setStyleSheet("color: #94A3B8; font-size: 12.5px; line-height: 1.45;")
+        left_col.addWidget(self.hint_label)
 
-        # PC Code Badge
-        code_box = QHBoxLayout()
-        code_title = QLabel("Bilgisayar Eşleşme Kodunuz:")
-        code_title.setStyleSheet("color: #94a3b8; font-size: 12px;")
+        top_row.addLayout(left_col, stretch=1)
 
-        self.code_badge = QLabel(self.pc_code)
-        self.code_badge.setStyleSheet(
-            "background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #2563eb, stop:1 #1d4ed8);"
-            "color: #ffffff; font-size: 18px; font-weight: 800; padding: 4px 16px; border-radius: 6px;"
-            "letter-spacing: 2px;"
-        )
+        # Right: Pairing Code Display Box
+        self.code_frame = QFrame()
+        self.code_frame.setObjectName("codeBox")
+        self.code_frame.setFixedWidth(155)
+        code_layout = QVBoxLayout(self.code_frame)
+        code_layout.setContentsMargins(14, 10, 14, 10)
+        code_layout.setSpacing(2)
 
-        code_box.addWidget(code_title)
-        code_box.addWidget(self.code_badge)
-        top_layout.addLayout(code_box)
+        self.code_caption = QLabel()
+        self.code_caption.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.code_caption.setStyleSheet("color: #93C5FD; font-size: 10px; font-weight: 700; letter-spacing: 1.2px;")
 
-        main_layout.addLayout(top_layout)
+        self.code_value = QLabel(self.pc_code)
+        self.code_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.code_value.setStyleSheet("color: #FFFFFF; font-size: 26px; font-weight: 800; letter-spacing: 3px;")
 
-        # Helper Info Text
-        self.info_text = QLabel(
-            f"💡 Televizyonunuzdaki <b>Web Video Caster Receiver</b> uygulamasında <b>'Enter Code'</b> "
-            f"kısmına yukarıdaki <b>{self.pc_code}</b> kodunu yazın (veya tarayıcıdan <i>http://{self.local_ip}:30001</i> açın)."
-        )
-        self.info_text.setWordWrap(True)
-        self.info_text.setStyleSheet("color: #94a3b8; font-size: 12px; line-height: 1.4;")
-        main_layout.addWidget(self.info_text)
+        code_layout.addWidget(self.code_caption)
+        code_layout.addWidget(self.code_value)
+        top_row.addWidget(self.code_frame)
 
-        # Bottom Bar: Manual TV Code or IP Input
-        input_bar = QHBoxLayout()
-        input_bar.setSpacing(8)
+        root.addLayout(top_row)
 
-        input_bar.addWidget(QLabel("veya TV'deki Kodu / IP'yi Girin:"))
+        # Divider Line
+        divider = QFrame()
+        divider.setFixedHeight(1)
+        divider.setStyleSheet("background-color: #1E293B;")
+        root.addWidget(divider)
+
+        # Bottom Section: Manual Connect & Network Scan
+        bottom_row = QHBoxLayout()
+        bottom_row.setSpacing(10)
+
+        self.manual_label = QLabel()
+        self.manual_label.setStyleSheet("color: #CBD5E1; font-weight: 600; font-size: 12.5px;")
+        bottom_row.addWidget(self.manual_label)
 
         self.tv_input = QLineEdit()
-        self.tv_input.setPlaceholderText("Örn: 9K veya 192.168.1.50")
-        self.tv_input.setMaximumWidth(220)
-        input_bar.addWidget(self.tv_input)
+        self.tv_input.setMinimumWidth(220)
+        bottom_row.addWidget(self.tv_input, stretch=1)
 
-        self.connect_btn = QPushButton("Bağlan")
-        self.connect_btn.setProperty("class", "primary-btn")
+        self.connect_btn = QPushButton()
+        self.connect_btn.setObjectName("primaryBtn")
+        self.connect_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.connect_btn.clicked.connect(self._on_manual_connect)
-        input_bar.addWidget(self.connect_btn)
+        bottom_row.addWidget(self.connect_btn)
 
-        self.scan_btn = QPushButton("Ağı Tara (SSDP/Port)")
+        self.scan_btn = QPushButton()
+        self.scan_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.scan_btn.clicked.connect(self._on_scan_subnet)
-        input_bar.addWidget(self.scan_btn)
+        bottom_row.addWidget(self.scan_btn)
 
-        input_bar.addStretch()
-        main_layout.addLayout(input_bar)
+        root.addLayout(bottom_row)
+
+    def _retranslate_ui(self):
+        self.code_caption.setText(i18n.t("pairing_code_label"))
+        self.hint_label.setText(
+            i18n.t("pairing_hint", code=self.pc_code, ip=self.local_ip, port=self.port)
+        )
+        self.manual_label.setText(i18n.t("manual_ip_label"))
+        self.tv_input.setPlaceholderText(i18n.t("manual_ip_placeholder"))
+
+        if self.connect_btn.isEnabled():
+            self.connect_btn.setText(i18n.t("btn_connect"))
+        else:
+            self.connect_btn.setText(i18n.t("btn_checking"))
+
+        if self.scan_btn.isEnabled():
+            self.scan_btn.setText(i18n.t("btn_scan"))
+        else:
+            self.scan_btn.setText(i18n.t("btn_scanning"))
+
+        self._update_status_badge()
+
+    def _update_status_badge(self):
+        if self._is_connected:
+            self.dot.setStyleSheet("border-radius: 5px; background-color: #10B981;")
+            self.status_label.setText(i18n.t("status_connected", ip=self._connected_ip or "Smart TV"))
+            self.status_label.setStyleSheet("font-weight: 700; font-size: 14px; color: #34D399;")
+        else:
+            self.dot.setStyleSheet("border-radius: 5px; background-color: #F59E0B;")
+            self.status_label.setText(i18n.t("status_waiting"))
+            self.status_label.setStyleSheet("font-weight: 700; font-size: 14px; color: #F8FAFC;")
 
     def _on_app_state_change(self, payload: dict):
         event = payload.get("event")
         if event == "tv_connection_changed":
             state = payload.get("state", {})
-            connected = state.get("tv_connected", False)
-            ip = state.get("tv_client_ip", "")
-            if connected:
-                self.dot.setStyleSheet("border-radius: 7px; background-color: #22c55e;")  # Green
-                self.status_label.setText(f"Televizyon Bağlandı! ({ip or 'Bağlı'})")
-                self.status_label.setStyleSheet("font-weight: 700; font-size: 14px; color: #4ade80;")
-            else:
-                self.dot.setStyleSheet("border-radius: 7px; background-color: #eab308;")  # Yellow
-                self.status_label.setText("TV Bağlantısı Bekleniyor...")
-                self.status_label.setStyleSheet("font-weight: 600; font-size: 14px; color: #f8fafc;")
+            self._is_connected = state.get("tv_connected", False)
+            self._connected_ip = state.get("tv_client_ip", "")
+            QTimer.singleShot(0, self._update_status_badge)
 
     def _on_manual_connect(self):
         val = self.tv_input.text().strip()
         if not val:
-            QMessageBox.warning(self, "Uyarı", "Lütfen TV ekranında görünen kodu veya IP adresini girin.")
+            QMessageBox.warning(self, i18n.t("dlg_warn_title"), i18n.t("dlg_enter_code"))
             return
 
         self.connect_btn.setEnabled(False)
-        self.connect_btn.setText("Kontrol Ediliyor...")
+        self.connect_btn.setText(i18n.t("btn_checking"))
 
         def _do_resolve():
             active_ip = None
             if "." in val and val.replace(".", "").isdigit():
-                # Direct IP entered
                 if DeviceScanner.test_tv_ip(val):
                     active_ip = val
             else:
-                # Pairing code entered
                 active_ip = DeviceScanner.resolve_code_to_active_ip(val)
-
-            # Back on UI
             QTimer.singleShot(0, lambda: self._handle_resolve_result(active_ip, val))
 
-        import threading
         threading.Thread(target=_do_resolve, daemon=True).start()
 
     def _handle_resolve_result(self, active_ip: str, input_val: str):
         self.connect_btn.setEnabled(True)
-        self.connect_btn.setText("Bağlan")
+        self.connect_btn.setText(i18n.t("btn_connect"))
 
         if active_ip:
             app_state.set_tv_connected(True, active_ip, "Smart TV")
             QMessageBox.information(
                 self,
-                "Başarılı",
-                f"Televizyon bulundu: {active_ip}!\nTelevizyonunuz yayına hazır.",
+                i18n.t("dlg_success_title"),
+                i18n.t("dlg_tv_found", ip=active_ip),
             )
             self.tv_paired.emit(active_ip)
         else:
             QMessageBox.warning(
                 self,
-                "Bulunamadı",
-                f"'{input_val}' için televizyona ulaşılamadı.\n"
-                f"Lütfen televizyonunuzun aynı Wi-Fi ağına bağlı olduğundan ve TV'deki Web Video Caster "
-                f"uygulamasında bu bilgisayarın eşleşme kodunun ({self.pc_code}) girildiğinden emin olun.",
+                i18n.t("dlg_not_found_title"),
+                i18n.t("dlg_not_found_msg", val=input_val, code=self.pc_code),
             )
 
     def _on_scan_subnet(self):
         self.scan_btn.setEnabled(False)
-        self.scan_btn.setText("Taranıyor...")
+        self.scan_btn.setText(i18n.t("btn_scanning"))
 
         def _do_scan():
             hosts = DeviceScanner.scan_local_subnet()
             QTimer.singleShot(0, lambda: self._handle_scan_result(hosts))
 
-        import threading
         threading.Thread(target=_do_scan, daemon=True).start()
 
     def _handle_scan_result(self, hosts: list):
         self.scan_btn.setEnabled(True)
-        self.scan_btn.setText("Ağı Tara (SSDP/Port)")
+        self.scan_btn.setText(i18n.t("btn_scan"))
 
         if hosts:
             chosen = hosts[0]
             app_state.set_tv_connected(True, chosen, "Discovered TV")
             QMessageBox.information(
                 self,
-                "Cihaz Bulundu",
-                f"Ağda Web Video Caster uyumlu televizyon bulundu: {chosen}",
+                i18n.t("dlg_scan_done_title"),
+                i18n.t("dlg_scan_found", ip=chosen),
             )
             self.tv_paired.emit(chosen)
         else:
             QMessageBox.information(
                 self,
-                "Arama Tamamlandı",
-                "Ağda otomatik olarak yanıt veren TV bulunamadı.\n"
-                f"En güvenilir yöntem: TV'nizdeki uygulamada 'Enter Code' kısmına bilgisayarınızın kodunu ({self.pc_code}) yazmaktır.",
+                i18n.t("dlg_scan_done_title"),
+                i18n.t("dlg_scan_none", code=self.pc_code),
             )

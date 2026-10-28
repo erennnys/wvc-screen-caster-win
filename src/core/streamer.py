@@ -163,6 +163,7 @@ class ScreenStreamer:
             stderr=subprocess.PIPE,
             text=True,
             bufsize=1,
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
         )
         self._is_running = True
         app_state.set_mode("screen_mirroring")
