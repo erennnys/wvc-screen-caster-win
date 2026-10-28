@@ -176,6 +176,7 @@ class MediaTab(QWidget):
             self.is_playing = True
 
     def _stop_media(self):
+        app_state.set_mode("idle")
         self.server.broadcast_command({"action": "stop"})
         self.is_playing = False
         self.play_btn.setText("▶  Oynat")

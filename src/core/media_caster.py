@@ -55,7 +55,6 @@ class MediaCaster:
         app_state.active_media_duration = self.metadata.get("duration", 0.0)
         app_state.active_media_current_time = 0.0
         app_state.active_media_paused = False
-        app_state.set_mode("media_casting")
 
         logger.info(f"Loaded media: {filename} ({self.metadata.get('duration', 0):.1f}s)")
         return self.metadata
