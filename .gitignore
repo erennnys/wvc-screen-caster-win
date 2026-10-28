@@ -17,6 +17,14 @@ dist/
 temp_hls/
 *.ts
 *.m3u8
+*.vtt
+
+# Logs & Brain Artifacts
+*.log
+brain_*.zip
+brain_*.jsonl
+brain_transcript*
+
 
 # PyInstaller
 *.manifest
