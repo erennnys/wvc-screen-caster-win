@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Temporary HLS chunks & stream buffer
+temp_hls/
+*.ts
+*.m3u8
+
+# PyInstaller
+*.manifest
+*.spec
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store

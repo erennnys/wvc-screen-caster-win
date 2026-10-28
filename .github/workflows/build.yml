@@ -1,0 +1,54 @@
+name: Build Windows Application
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Setup FFmpeg
+      uses: FedericoCarboni/setup-ffmpeg@v3
+      with:
+        ffmpeg-version: 'release'
+        architecture: 'x64'
+
+    - name: Build Executable with PyInstaller
+      run: |
+        pyinstaller --noconfirm --onedir --windowed `
+          --name "WVC_Caster" `
+          --add-data "src/receiver_web;src/receiver_web" `
+          main.py
+
+    - name: Copy FFmpeg binaries into dist
+      shell: pwsh
+      run: |
+        $ffmpegPath = (Get-Command ffmpeg).Source
+        $ffprobePath = (Get-Command ffprobe).Source
+        Copy-Item $ffmpegPath -Destination "dist/WVC_Caster/"
+        Copy-Item $ffprobePath -Destination "dist/WVC_Caster/"
+
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: WVC_Caster_Windows
+        path: dist/WVC_Caster/

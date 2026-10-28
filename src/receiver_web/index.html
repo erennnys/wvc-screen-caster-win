@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>WVC Receiver - PC Caster</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="hls.min.js"></script>
+</head>
+<body>
+    <div id="app-container">
+        <!-- Main Video Element -->
+        <video id="video-player" playsinline preload="auto"></video>
+
+        <!-- Splash / Waiting Screen -->
+        <div id="splash-screen">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24">
+                    <path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12zM9 13l3-3 3 3H9z"/>
+                </svg>
+            </div>
+            <h1>Web Video Caster - PC Alıcısı</h1>
+            <div class="status-badge">
+                <div class="status-dot" id="status-dot"></div>
+                <span id="status-text">Bilgisayara bağlanıyor...</span>
+            </div>
+            <p class="instructions" id="instructions-text">
+                Bağlantı kuruldu! Bilgisayarınızdaki uygulamadan <b>Ekran Yansıtma</b> veya <b>Medya Yayını</b> başlatabilirsiniz.
+            </p>
+        </div>
+
+        <!-- On-Screen HUD Overlay for Media Playback -->
+        <div id="overlay-hud">
+            <div class="hud-info">
+                <span class="hud-title" id="hud-title">Ekran Yansıtma</span>
+                <span class="hud-sub" id="hud-sub">Canlı Yayın</span>
+            </div>
+            <div class="hud-time" id="hud-time">00:00 / 00:00</div>
+        </div>
+    </div>
+
+    <script src="player.js"></script>
+</body>
+</html>
