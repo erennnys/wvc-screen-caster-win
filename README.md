@@ -1,112 +1,119 @@
-# 📺 Web Video Caster - Windows 11 Ekran ve Medya Yansıtıcı (Caster)
+# 📺 Web Video Caster — Windows 11 Screen & Media Caster
 
-> **Web Video Caster Receiver** (Android TV, Google TV, Fire TV, LG webOS, Samsung Tizen) uygulamasına kendini uyumlu bir kaynak cihaz olarak tanıtarak **bilgisayarınızın ekranını (sesiyle birlikte) televizyona yansıtan** ve seçtiğiniz **yerel video/müzik dosyalarını altyazısıyla birlikte televizyonda oynatan** modern bir Windows 11 masaüstü uygulamasıdır.
+<p align="center">
+  <b><a href="README.md">🇺🇸 English</a></b> | <b><a href="README.tr.md">🇹🇷 Türkçe</a></b>
+</p>
 
----
+<p align="center">
+  <img src="https://img.shields.io/badge/Platform-Windows%2011-0078D4?logo=windows11" alt="Windows 11" />
+  <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python" alt="Python 3" />
+  <img src="https://img.shields.io/badge/UI-PyQt6-41CD52?logo=qt" alt="PyQt6" />
+  <img src="https://img.shields.io/badge/Streaming-FFmpeg%20%2B%20HLS-007808?logo=ffmpeg" alt="FFmpeg" />
+  <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License" />
+</p>
 
-## 🚀 Özellikler
-
-- **🖥️ Canlı Ekran Yansıtma (Screen Mirroring):**
-  - Windows masaüstünüzü donanım hızlandırma (NVIDIA NVENC, Intel QuickSync veya CPU) ile yakalar.
-  - Düşük gecikmeli yerel HLS (HTTP Live Streaming) formatında televizyona aktarır.
-  - 1080p, 720p, 2K ve 4K çözünürlük ile 30 FPS / 60 FPS seçenekleri.
-- **🔊 Masaüstü Sistem Sesi (Audio Loopback):**
-  - Ekranı yansıtırken bilgisayarınızda çalan tüm sistem seslerini televizyon hoparlörlerine senkronize iletir.
-- **🎬 Yerel Medya Oynatıcı (Media Casting):**
-  - Bilgisayarınızdan seçeceğiniz video (MP4, MKV, AVI, MOV, WEBM, TS) veya ses (MP3, FLAC, WAV, AAC) dosyalarını televizyonda oynatır.
-  - **HTTP Range Requests (Kısmi İçerik):** Televizyonda videoyu ileri/geri sararken takılma yaşanmaz, dosyanın tamamı beklenmeden anında atlama yapılır.
-  - **Otomatik Altyazı Desteği (.srt / .vtt):** Film veya diziyle aynı klasördeki `.srt` altyazıyı otomatik bulur, WebVTT formatına dönüştürüp televizyon ekranında gösterir.
-- **🔗 Web Video Caster Base36 Protokol Uyumluluğu:**
-  - TV'nizde Web Video Caster Receiver açıkken gösterilen 2-4 haneli eşleşme kodunu veya IP adresini tam olarak çözer.
-  - Bilgisayarınız için özel üretilen eşleşme kodunu TV'ye yazarak **tek dokunuşla eşleşme** sağlar.
-- **🌐 Çevrimdışı (Offline) Çalışabilme:**
-  - TV alıcı arayüzü ve `hls.min.js` uygulama içine gömülüdür. İnternet kesilse dahi yerel Wi-Fi ağı üzerinden kesintisiz çalışır.
-- **🎨 Windows 11 Fluent Dark UI:**
-  - PyQt6 ile geliştirilmiş modern, göz yormayan karanlık tema, canlı log konsolu ve oynatıcı kontrolleri.
+> A modern Windows 11 desktop application that emulates a native Web Video Caster sender device to **mirror your desktop screen (with synchronized system audio)** and **cast local video/music files with subtitles** directly to the **Web Video Caster Receiver** app on your Smart TV (Android TV, Google TV, Fire TV, LG webOS, Samsung Tizen, Vestel/TiVo/Vewd).
 
 ---
 
-## 🛠️ Mimari ve Nasıl Çalışır?
+## ✨ Features
+
+- **🖥️ Ultra-Low Latency Screen Mirroring:**
+  - Captures your Windows desktop with hardware encoder acceleration (**NVIDIA NVENC, Intel QuickSync, AMD AMF, or CPU libx264**).
+  - Streams chunked local HLS (HTTP Live Streaming) directly to the TV player.
+  - Supports 1080p Full HD, 720p HD, 2K QHD, and 4K Ultra HD at 30 FPS, 60 FPS, or 24 FPS.
+- **🔊 Synchronized Desktop Audio Loopback:**
+  - Captures and streams all PC system audio in sync with the desktop display.
+- **🎬 Local Media Casting & Remote Controller:**
+  - Streams local video files (`.mp4`, `.mkv`, `.avi`, `.mov`, `.webm`, `.ts`) and audio tracks (`.mp3`, `.flac`, `.wav`, `.aac`) directly to your TV.
+  - **HTTP 206 Partial Content (Byte Range Requests):** Instant seeking and scrubbing without waiting for files to download.
+  - **Interactive Remote Controls:** Click-to-seek progress bar, live scrubbing preview, fast skip buttons (`⏪ -10s`, `⏩ +10s`), volume slider, and mute toggle.
+  - **Automatic Subtitles (.srt / .vtt):** Detects matching subtitles in the same folder, converts them to WebVTT on the fly, and displays them on the TV.
+- **🔗 Smart TV Pairing & Full Protocol Emulation:**
+  - Implements the native Web Video Caster Smart TV long-polling protocol (`/web-receiver-io/*`) and browser WebSocket interface (`/ws`).
+  - Generates Base36 pairing codes (e.g. `7U`) for instantaneous, one-touch pairing from the TV.
+- **🌐 Bilingual Internationalization (TR / EN):**
+  - Switch the entire user interface between English and Turkish on the fly with a single header button.
+- **🎨 Windows 11 Studio Dark Theme:**
+  - Modern, dark-mode elevated card UI designed with Fluent design principles, completely free of noisy background console windows.
+
+---
+
+## 🛠️ Architecture
 
 ```mermaid
 flowchart LR
-    subgraph PC["Windows 11 Bilgisayar"]
-        UI["PyQt6 Masaüstü Arayüzü"]
-        Streamer["FFmpeg Ekran & Ses Yakalayıcı"]
-        Media["Medya Sunucusu (HTTP Range)"]
-        Server["Yerel HTTP & WebSocket Sunucusu (:30001)"]
+    subgraph PC["Windows 11 PC"]
+        UI["PyQt6 Studio UI"]
+        Streamer["FFmpeg Capture Pipeline"]
+        Media["Local Media Server (HTTP 206)"]
+        Server["Async HTTP & WebSocket Server (:30001)"]
     end
 
-    subgraph TV["Televizyon (Web Video Caster Receiver)"]
-        WVC["Web Video Caster Receiver"]
-        Player["HTML5 Video & HLS.js Oynatıcı"]
+    subgraph TV["Smart TV (Web Video Caster Receiver)"]
+        WVC["Web Video Caster Receiver App"]
+        Player["Native Video / HLS.js Player"]
     end
 
-    UI -->|Yayın Emri| Streamer
-    UI -->|Medya Seçimi| Media
-    Streamer -->|HLS Canlı Akış| Server
-    Media -->|Video & Altyazı| Server
+    UI -->|Start Mirroring| Streamer
+    UI -->|Cast File & Control| Media
+    Streamer -->|HLS Live Stream| Server
+    Media -->|Video & Subtitle Stream| Server
     
-    Server <-->|Eşleşme Kodu & WebSocket Kontrol| WVC
-    WVC -->|Yayın & Medyayı Oynat| Player
+    Server <-->|Long-Poll / WebSocket & Pairing| WVC
+    WVC -->|Render Stream & Media| Player
 ```
-
-1. **Eşleşme (Handshake):** Bilgisayarınız yerel ağda port `30001` üzerinde hafif bir HTTP & WebSocket sunucusu başlatır. Televizyonunuzdaki WVC Receiver uygulamasına bilgisayarın kodu (örneğin `9W`) girildiğinde TV, bilgisayarınızın web arayüzünü yükler.
-2. **Ekran Yansıtma:** FFmpeg, Windows masaüstünü ve ses kartını yakalayarak 1'er saniyelik HLS parçalarına böler. TV oynatıcısı bu akışı neredeyse sıfır gecikmeyle oynatır.
-3. **Medya Kontrolü:** Bilgisayar arayüzündeki Oynat, Duraklat, İleri/Geri Sar ve Ses kontrolleri WebSocket üzerinden TV'ye anında iletilir.
 
 ---
 
-## 📦 Kurulum ve Çalıştırma (Windows 11)
+## 📦 Getting Started
 
-### Yöntem 1: Kaynak Koddan Çalıştırma
+### Prerequisites
 
-1. **Python 3.10+ ve FFmpeg Gereklidir:**
-   - [Python İndir](https://www.python.org/downloads/) (Kurulumda *"Add Python to PATH"* kutucuğunu işaretleyin).
-   - [FFmpeg İndir](https://www.gyan.dev/ffmpeg/builds/) veya terminalden winget ile kurun:
-     ```cmd
-     winget install "Gyan.FFmpeg"
-     ```
+1. **Python 3.10+**: [Download Python](https://www.python.org/downloads/) *(make sure to check "Add Python to PATH")*.
+2. **FFmpeg**: [Download FFmpeg](https://www.gyan.dev/ffmpeg/builds/) or install via Windows Package Manager:
+   ```powershell
+   winget install "Gyan.FFmpeg"
+   ```
 
-2. **Depoyu Klonlayın ve Klasöre Girin:**
-   ```cmd
-   git clone https://github.com/<KULLANICI_ADINIZ>/wvc-screen-caster-win.git
+### Installation
+
+1. **Clone the repository:**
+   ```powershell
+   git clone https://github.com/erennnys/wvc-screen-caster-win.git
    cd wvc-screen-caster-win
    ```
 
-3. **Gereksinimleri Yükleyin:**
-   ```cmd
-   python -m venv venv
-   venv\Scripts\activate
-   pip install -r requirements.txt
+2. **Install dependencies:**
+   ```powershell
+   py -m pip install -r requirements.txt
    ```
 
-4. **Uygulamayı Başlatın:**
-   ```cmd
-   python main.py
+3. **Launch the application:**
+   ```powershell
+   py main.py
    ```
+   *(To run completely windowless without any background terminal, use `pyw main.py` or double-click the desktop shortcut.)*
 
 ---
 
-### Yöntem 2: Tek Tıkla EXE Olarak Derleme (PyInstaller)
+### Standalone Executable (PyInstaller)
 
-Proje klasöründeki `build_exe.bat` dosyasını çift tıklatarak çalıştırın.
-İşlem tamamlandığında `dist\WVC_Caster\WVC_Caster.exe` konumunda bağımsız Windows uygulaması hazır olacaktır!
-
----
-
-## 📺 Televizyona Bağlanma Adımları
-
-1. Bilgisayarınızın ve Televizyonunuzun **aynı Wi-Fi / Yerel Ağa** bağlı olduğundan emin olun.
-2. Televizyonunuzda **Web Video Caster Receiver** uygulamasını açın.
-3. Bilgisayardaki uygulamanın üst kısmında büyük mavi kutuda görünen **Eşleşme Kodunu** (Örn: `9W`):
-   - TV ekranındaki **"Enter Code" (Kod Gir)** seçeneğine yazıp **Connect** butonuna basın.
-   - *Alternatif:* TV ekranında bir kod veya IP görünüyorsa, bilgisayardaki uygulamada *"TV'deki Kodu / IP'yi Girin"* kutusuna yazıp **"Bağlan"** butonuna basın.
-4. TV ekranında *"Bilgisayar Bağlandı"* uyarısı göründüğünde eşleşme tamamlanmıştır!
-5. Artık **"Ekran Yansıtmayı Başlat"** diyerek masaüstünüzü yansıtabilir veya **"Medya Yayını"** sekmesinden film/video seçip TV'de keyifle izleyebilirsiniz.
+Run the included `build_exe.bat` script to package the application into a standalone Windows executable under `dist/WVC_Caster/WVC_Caster.exe`.
 
 ---
 
-## 📄 Lisans
+## 📺 Connecting to your TV
 
-Bu proje [MIT Lisansı](LICENSE) ile lisanslanmıştır.
+1. Ensure your PC and Smart TV are connected to the **same local Wi-Fi / LAN network**.
+2. Launch the **Web Video Caster Receiver** app on your TV.
+3. Look at the **Pairing Code** shown in the top card of the PC app (e.g., `7U`):
+   - On your TV, select **Enter Code** and enter the code.
+   - *Alternatively:* Enter the TV's IP address in the manual connect bar on PC and click **Connect**.
+4. Once paired, the status indicator turns green. Switch to **Screen Mirroring** to broadcast your desktop or **Media Player** to cast local videos.
+
+---
+
+## 📄 License
+
+Distributed under the [MIT License](LICENSE).
